@@ -2,24 +2,26 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	"io"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
+
+	"encoding/json"
 
 	"github.com/PuerkitoBio/goquery"
-	"encoding/json"
 
 	// "io"
 	// "os"
 
-	"github.com/fatih/color"
 	"strconv"
+
+	"github.com/fatih/color"
 )
 
-
-
-func main() {  
-
+func main() {
 	client := &http.Client{}
 	reqv, err := http.NewRequest("GET", "https://steamcommunity.com/my/inventoryhistory", nil)
 
@@ -28,175 +30,177 @@ func main() {
 		return
 	}
 
+	cookie := "recentlyVisitedAppHubs=1857090; timezoneOffset=10800,0; sessionid=be1aba1cfc7b84e5517e4fbd; steamCountry=KZ%7C3d6c43161f436d0e29651d2af5cf0e8d; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAxN18yNjRFQ0JEOF83NEZGRCIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDc4NTMzMzIsICJuYmYiOiAxNzM5MTI1Mjc1LCAiaWF0IjogMTc0Nzc2NTI3NSwgImp0aSI6ICIwMDBBXzI2NEVDQUExX0RCRDFFIiwgIm9hdCI6IDE3NDc3NjUyNzQsICJydF9leHAiOiAxNzY2MDYyOTE2LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMjEyLjk2LjY2LjE2NyIsICJpcF9jb25maXJtZXIiOiAiMjEyLjk2LjY2LjE2NyIgfQ.9eNT2fq4J4w12lCUbOZ9SW8IQxc2prsx7l5W7WG1id0vmhOsB2O9sWUVlgNyn6vY0SSX_OF0_mXtc9ftmBAJBw; browserid=15310613048948578"
 	reqv.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 7; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0")
-	reqv.Header.Add("Accept-Charset", "UTF-8") 
+	reqv.Header.Add("Accept-Charset", "UTF-8")
 	reqv.Header.Add("Accept-Language", "en-US")
-	reqv.Header.Add("Cookie", "timezoneOffset=10800,0; recentlyVisitedAppHubs=1138850%2C730%2C1361210%2C1643320%2C2142790; browserid=96369691529769043; strInventoryLastContext=730_2; steamCountry=RU%7Cbf50c1b444a4661436cc9f399260fbd0; sessionid=ea5097acf1061188568bde20; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNjIwNkNEQ19EMDBGQyIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDc0MjQ3MTAsICJuYmYiOiAxNzM4Njk3NzUyLCAiaWF0IjogMTc0NzMzNzc1MiwgImp0aSI6ICIwMDBBXzI2NEVDQTQ3XzIyODczIiwgIm9hdCI6IDE3NDQ0Njg1NjgsICJydF9leHAiOiAxNzYyMzgwMTMwLCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiNS4xOC4yNTMuMTk4IiwgImlwX2NvbmZpcm1lciI6ICIxMDQuMjM4LjI5LjI0NyIgfQ.y3R5i9WYQSW9IhdPrT7FxTOlm1cvtsb6jny7OpoR2Bk6qnXRy0eRGr96ATId9c6pbyq5HREQZTTn5ib24-bWBg")
+	reqv.Header.Add("Cookie", cookie)
 
 	resp, err := client.Do(reqv)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	defer resp.Body.Close() 
+	defer resp.Body.Close()
 
-    // io.Copy(os.Stdout, resp.Body)
-	// fmt.Print(resp.Body)
-	
-	// content, err := os.ReadFile("test.html")
-	
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	history_selection := doc.Find(".tradehistoryrow")
-	count_of_elements := history_selection.Length()
-	fmt.Printf("\nelements %d\n", count_of_elements)
+	item_list := CollectOpenedItems(doc)
 
-	item_list := []Item{}
-
-	history_selection.Each(func(i int, s *goquery.Selection) {
-		event_text := s.Find(".tradehistory_event_description").Text();
-		
-		if strings.Contains(event_text, "Unlocked a container") {
-			println("conteiner event")
-			s.Find(".tradehistory_items_withimages:contains('+')").Each(func(i int, s *goquery.Selection) {
-				
-
-				s.Find("[data-classid]").Each(func(i int, s *goquery.Selection) {
-					// data_app_id, exist := s.Attr("data-appid")
-					data_classid, exist := s.Attr("data-classid")
-					data_instanceid, exist := s.Attr("data-instanceid")
-					_ = exist
-					// fmt.Println(data_classid, data_instanceid);
-					
-					var added_item = Item {data_classid + "_" + data_instanceid}
-					item_list = append(item_list, added_item)
-				})
-			})
-		} 
-	})
-
-
-
-	json_string := GetJsonString(doc)
-	// println(len(json_string))
-	// println(json_string)
-
+	json_string := GetJsonString("g_rgDescriptions", doc)
 	var data AppDescriptions
 	err_ := json.Unmarshal([]byte(json_string), &data)
 	if err_ != nil {
 		log.Fatalf("Parse error %v:", err_)
 	}
 
+	PrintItems(item_list, data)
+	cursor_string := GetJsonString("g_historyCursor", doc)
 
-
-	for i := 0; i < len(item_list); i++ {
-		item_id := item_list[i].Id;
-		
-		// Пример обращения к данным
-		item := data["730"][item_id]
-		// fmt.Println("Название предмета:", item)
-		
-		color_hex := item.Tags[4].Color
-		color_int, err := strconv.ParseInt(color_hex, 16, 32)
-
-		if (err == nil) {
-			r := (int)((color_int >> 16) & 255);
-			g := (int)((color_int >> 8) & 255);
-			b := (int)((color_int) & 255);
-
-			// fmt.Printf("%d %d %d %d", color_int, r, g, b)
-			color.RGB(r, g, b).Println(item.Name);
-		}
+	var cursor Cursor
+	err__ := json.Unmarshal([]byte(cursor_string), &cursor)
+	if err__ != nil {
+		log.Fatalf("Parse error %v:", err__)
 	}
+
+	println(cursor.Time)
+
+	session_id := GetJsonString("g_sessionID", doc)
+	steam_id := GetJsonString("g_steamID", doc)
+	println("steam_id:", steam_id)
+	println("session_id: ", session_id)
+
+	// // GET
+	// // https://steamcommunity.com/id/fatalitiq/inventoryhistory/?ajax=1&cursor[time]=1746124298&cursor[time_frac]=0&cursor[s]=20114846436&sessionid=be1aba1cfc7b84e5517e4fbd
+
+	time.Sleep(8)
+	params := url.Values{}
+	params.Add("ajax", "1")
+	params.Add("cursor[time]", strconv.Itoa(cursor.Time))
+	params.Add("cursor[time_frac]", strconv.Itoa(cursor.TimeFrac))
+	params.Add("cursor[s]", cursor.S)
+	params.Add("sessionid", session_id)
+	fullURL := "https://steamcommunity.com/id/fatalitiq/inventoryhistory/?" + params.Encode()
+	println(fullURL)
+	new_request, err := http.NewRequest("GET", fullURL, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	new_request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 7; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0")
+	new_request.Header.Add("Accept-Charset", "UTF-8")
+	new_request.Header.Add("Accept-Language", "en-US")
+	new_request.Header.Add("Cookie", cookie)
+
+	new_client := &http.Client{}
+	new_resp, new_resp_err := new_client.Do(new_request)
+	if new_resp_err != nil {
+		log.Fatal(new_resp_err)
+	}
+
+	defer new_resp.Body.Close()
+
+	var new_data UpdateHIstory
+
+	new_body, err := io.ReadAll(new_resp.Body)
+	err_2 := json.Unmarshal(new_body, &new_data)
+	if err_2 != nil {
+		log.Fatal(err_2)
+	}
+
+	println("is_sucess: ", new_data.Seccess)
+	println("num: ", new_data.Num)
+
+	new_doc, doc_err := goquery.NewDocumentFromReader(strings.NewReader(new_data.Html))
+	if doc_err != nil {
+		log.Fatal(doc_err)
+	}
+
+	new_item_list := CollectOpenedItems(new_doc)
+	println("list size: ", len(new_item_list))
+	PrintItems(new_item_list, new_data.Descriptions)
+
+}
+
+type Cursor struct {
+	Time     int    `json:"time"`
+	TimeFrac int    `json:"time_frac"`
+	S        string `json:"s"`
 }
 
 type ItemDescription struct {
 	// IconUrl string `json:"icon_url"`
 	// IconDragUrl string `json:"icon_drag_url"`
-	Name string `json:"name"`
-	MarketHashName string `json:"market_hash_name"`
-	MarketName string `json:"market_name"`
-	NameColor string `json:"name_color"`
+	Name            string `json:"name"`
+	MarketHashName  string `json:"market_hash_name"`
+	MarketName      string `json:"market_name"`
+	NameColor       string `json:"name_color"`
 	BackgroundColor string `json:"background_color"`
 	// Type:''
 	Description []struct {
-		Type string `json:"type"`
+		Type  string `json:"type"`
 		Value string `json:"value"`
-		Name string `json:"name"`
+		Name  string `json:"name"`
 	} `json:"descriptions"`
-	    Tags []struct {
-        InternalName string `json:"internal_name"`
-        Name         string `json:"name"`
-        Category     string `json:"category"`
-		Color		 string `json:"color"`
-    } `json:"tags"`
-}
-
-type Item struct {
-	Id string 
+	Tags []struct {
+		InternalName string `json:"internal_name"`
+		Name         string `json:"name"`
+		Category     string `json:"category"`
+		Color        string `json:"color"`
+	} `json:"tags"`
 }
 
 type AppDescriptions map[string]map[string]ItemDescription
 
-func GetJsonString(document *goquery.Document) string {
-	var scriptContent string
-	document.Find("script").Each(func(i int, s *goquery.Selection) {
-		text := s.Text()
-		if strings.Contains(text, "g_rgDescriptions") {
-			scriptContent = text
+type UpdateHIstory struct {
+	Seccess      bool            `json:"success"`
+	Html         string          `json:"html"`
+	Descriptions AppDescriptions `json:"descriptions"`
+	NewCursor    Cursor          `json:"cursor"`
+	Num          int             `json:"num"`
+}
+
+func CollectOpenedItems(doc *goquery.Document) []Item {
+	item_list := []Item{}
+
+	history_selection := doc.Find(".tradehistoryrow")
+	count_of_elements := history_selection.Length()
+	fmt.Printf("elements %d\n", count_of_elements)
+
+	history_selection.Each(func(i int, s *goquery.Selection) {
+		event_text := s.Find(".tradehistory_event_description").Text()
+
+		if strings.Contains(event_text, "Unlocked a container") {
+			s.Find(".tradehistory_items_withimages:contains('+')").Each(func(i int, s *goquery.Selection) {
+				s.Find("[data-classid]").Each(func(i int, s *goquery.Selection) {
+					data_classid, exist := s.Attr("data-classid")
+					data_instanceid, exist := s.Attr("data-instanceid")
+					_ = exist
+					var added_item = Item{data_classid + "_" + data_instanceid}
+					item_list = append(item_list, added_item)
+				})
+			})
 		}
 	})
 
-	jsonString := ""
-	if scriptContent != "" {
-		balance := 0 
-		in_string := false 
-		escape := false 
-		
-		start := strings.Index(scriptContent, "g_rgDescriptions = {")
-		start_index := start + len("g_rgDescriptions = {")
-		end_index := start_index 
-
-		for end_index < len(scriptContent) {
-			char := scriptContent[end_index]
-			switch (char) {
-				case '"':
-					if !escape {
-						in_string = !in_string 
-					}
-					escape = false
-				case '\\':
-					escape = !escape;
-				case '}', ']':
-					if (in_string) {
-						balance -= 1
-					}
-				case '{', '[':
-					if (in_string) {
-						balance += 1
-					}
-			}
-			
-
-			if balance == 0 && !in_string {
-				next_char := scriptContent[end_index + 1];
-				if (next_char == ';') {
-					jsonString = scriptContent[start_index-1:end_index+1];
-					break;
-				}
-			}  
-
-			if escape && char != '\\' {
-				escape = false
-			}
-
-			end_index += 1
-		}
-	}
-
-	return jsonString
+	return item_list
 }
 
+func PrintItems(items []Item, app_descptions AppDescriptions) {
+	for i := 0; i < len(items); i++ {
+		item_id := items[i].Id
+
+		item := app_descptions["730"][item_id]
+		color_hex := item.Tags[4].Color
+		color_int, err := strconv.ParseInt(color_hex, 16, 32)
+
+		if err == nil {
+			r := (int)((color_int >> 16) & 255)
+			g := (int)((color_int >> 8) & 255)
+			b := (int)((color_int) & 255)
+			color.RGB(r, g, b).Println(item.Name)
+		}
+	}
+}
