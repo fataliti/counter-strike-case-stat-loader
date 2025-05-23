@@ -28,7 +28,19 @@ func main() {
 		return
 	}
 
-	cookie := "recentlyVisitedAppHubs=1857090; timezoneOffset=10800,0; browserid=15310613048948578; sessionid=026f1d5d16c8e2e323e1a8b2; steamCountry=KZ%7C292f287301b455e899be334af20f3756; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAxN18yNjRFQ0JEOF83NEZGRCIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDc5NDIwMTgsICJuYmYiOiAxNzM5MjE0MzQ3LCAiaWF0IjogMTc0Nzg1NDM0NywgImp0aSI6ICIwMDBBXzI2NTZBNTJDXzIwNDFGIiwgIm9hdCI6IDE3NDc3NjUyNzQsICJydF9leHAiOiAxNzY2MDYyOTE2LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMjEyLjk2LjY2LjE2NyIsICJpcF9jb25maXJtZXIiOiAiMjEyLjk2LjY2LjE2NyIgfQ.GrWyLIE__YIE6OJe4c8mPC3QluIfDLOQMjTCyCUQzmqr25OduYYqnVvTRMYYOZAQyLh6bd79R_c6nrVPdVv_CQ"
+	// reader := bufio.NewReader(os.Stdin)
+	// input_cookie, input_err := reader.ReadString('\n')
+	// if input_err != nil {
+	// 	log.Fatal(input_err)
+	// }
+	// input_cookie = input_cookie[:len(input_cookie)-1]
+	// input_cookie = strings.TrimSpace(input_cookie)
+
+	// println("cookie", input_cookie)
+	// println("cookie", "pooke")
+
+	// cookie := input_cookie //
+	cookie := "recentlyVisitedAppHubs=1857090; timezoneOffset=10800,0; browserid=15310613048948578; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwQl8yNjU2QTUyQl8zMjUzNSIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDgwMzIyMzIsICJuYmYiOiAxNzM5MzA0MDg4LCAiaWF0IjogMTc0Nzk0NDA4OCwgImp0aSI6ICIwMDBBXzI2NTZBNTNGX0M5NzQ4IiwgIm9hdCI6IDE3NDc4NTQzMTAsICJydF9leHAiOiAxNzY1OTU4NTkwLCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMjEyLjE1NC4yMTIuNDciLCAiaXBfY29uZmlybWVyIjogIjIxMi45Ni43NS4yMDEiIH0.0DNQB777RNQKSCaMzG_3VM8L8sVs1VJE-J0JkC9t7sSwZo1rQZOmJOQKnFnbGowFaF2Lk-MCLr2XTaM5niLmCA; sessionid=9140fd7dc2927ca814cd4b18; app_impressions=730@2_100100_100101_100103; steamCountry=KZ%7C2f7342e3433d9b17b7597623ac74e4ba"
 	reqv.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 7; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0")
 	reqv.Header.Add("Accept-Charset", "UTF-8")
 	reqv.Header.Add("Accept-Language", "en-US")
@@ -65,33 +77,26 @@ func main() {
 
 	println("initial cursor: ", cursor_string)
 
-	session_id := GetJsonString("g_sessionID", doc)
-	steam_id := GetJsonString("g_steamID", doc)
+	session_id := FinsString("g_sessionID", doc)
+	steam_id := FinsString("g_steamID", doc)
+	user_link := FinsString("g_strProfileURL", doc)
+	user_link = strings.ReplaceAll(user_link, "\\", "")
 	println("steam_id:", steam_id)
 	println("session_id: ", session_id)
+	println("user_link", user_link)
 
 	PrintItems(item_list, data)
-	// // GET
-	// // https://steamcommunity.com/id/fatalitiq/inventoryhistory/?ajax=1&cursor[time]=1746124298&cursor[time_frac]=0&cursor[s]=20114846436&sessionid=be1aba1cfc7b84e5517e4fbd
-
-	// for i := 0; i < 2; i++ {
-	// 	println("load try", i)
-	// 	MoreLoadRequest(&cursor, session_id, cookie)
-	// 	time.Sleep(4 * time.Second)
-	// }
-
 	request_count := 0
 	for is_loop := true; is_loop; {
 		// println("load try", request_count)
-		if !MoreLoadRequest(&cursor, session_id, cookie) {
+		if !MoreLoadRequest(&cursor, user_link, session_id, cookie) {
 			break
 		}
-		request_count += 1
 		time.Sleep((3 + time.Duration(rand.Float64())) * time.Second)
+		request_count += 1
 	}
 
 	println("complete")
-
 }
 
 type Cursor struct {
@@ -118,7 +123,8 @@ type ItemDescription struct {
 		InternalName string `json:"internal_name"`
 		Name         string `json:"name"`
 		Category     string `json:"category"`
-		Color        string `json:"color"`
+		CategoryName string `json:"category_name"`
+		Color        string `json:"color,omitempty"`
 	} `json:"tags"`
 }
 
@@ -148,8 +154,10 @@ func CollectOpenedItems(doc *goquery.Document) []Item {
 					data_classid, exist := s.Attr("data-classid")
 					data_instanceid, exist := s.Attr("data-instanceid")
 					_ = exist
-					var added_item = Item{data_classid + "_" + data_instanceid}
-					item_list = append(item_list, added_item)
+
+					var finded_item Item
+					finded_item.Id = data_classid + "_" + data_instanceid
+					item_list = append(item_list, finded_item)
 				})
 			})
 		}
@@ -171,6 +179,8 @@ func PrintItems(items []Item, app_descptions AppDescriptions) {
 		if tag_len < 5 {
 			continue
 		}
+
+		items[i].Type = ItemType(item.Tags[0].InternalName)
 		color_hex := item.Tags[4].Color
 		color_int, err := strconv.ParseInt(color_hex, 16, 32)
 		var r, g, b int
@@ -179,11 +189,12 @@ func PrintItems(items []Item, app_descptions AppDescriptions) {
 			g = (int)((color_int >> 8) & 255)
 			b = (int)((color_int) & 255)
 			color.RGB(r, g, b).Println(item.Name)
+			items[i].Color = int(color_int)
 		}
 	}
 }
 
-func MoreLoadRequest(cursor *Cursor, session_id string, cookie string) bool {
+func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie string) bool {
 	params := url.Values{}
 	params.Add("ajax", "1")
 	params.Add("cursor[time]", strconv.Itoa(cursor.Time))
@@ -191,7 +202,7 @@ func MoreLoadRequest(cursor *Cursor, session_id string, cookie string) bool {
 	params.Add("cursor[s]", cursor.S)
 	params.Add("sessionid", session_id)
 	params.Add("app[]", "730")
-	fullURL := "https://steamcommunity.com/id/fatalitiq/inventoryhistory/?" + params.Encode()
+	fullURL := user_link + "/inventoryhistory/?" + params.Encode()
 	// println(fullURL)
 	new_request, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {

@@ -63,3 +63,11 @@ func GetJsonString(json_key string, document *goquery.Document) string {
 
 	return jsonString
 }
+
+func FinsString(key string, doc *goquery.Document) string {
+	var finded_string = GetJsonString(key, doc)
+	if finded_string != "" {
+		return finded_string[2 : len(finded_string)-1]
+	}
+	return ""
+}
