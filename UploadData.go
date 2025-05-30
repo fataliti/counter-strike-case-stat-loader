@@ -125,13 +125,14 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	new_item_list := CollectOpenedItems(new_doc)
 	PrintItems(new_item_list, new_data.Descriptions)
 
+	// fmt.Printf("new cursor %d %d %s \n", new_data.NewCursor.Time, new_data.NewCursor.TimeFrac, new_data.NewCursor.S)
+
 	if new_data.NewCursor.S == "" && new_data.NewCursor.Time == 0 && new_data.NewCursor.TimeFrac == 0 {
 		return false
 	}
 	cursor.S = new_data.NewCursor.S
 	cursor.Time = new_data.NewCursor.Time
 	cursor.TimeFrac = new_data.NewCursor.TimeFrac
-
 	return true
 }
 
@@ -144,6 +145,8 @@ func CollectOpenedItems(doc *goquery.Document) []Item {
 
 	history_selection.Each(func(i int, s *goquery.Selection) {
 		event_text := s.Find(".tradehistory_event_description").Text()
+		date_text := s.Find(".tradehistory_date").Text()
+		time_text := s.Find(".tradehistory_timestamp").Text()
 
 		if strings.Contains(event_text, "Unlocked a container") {
 			s.Find(".tradehistory_items_withimages:contains('+')").Each(func(i int, s *goquery.Selection) {
@@ -155,6 +158,10 @@ func CollectOpenedItems(doc *goquery.Document) []Item {
 					var finded_item Item
 					finded_item.Id = data_classid + "_" + data_instanceid
 					item_list = append(item_list, finded_item)
+
+					date_result := strings.TrimSpace(strings.ReplaceAll(date_text, time_text, ""))
+					finded_item.Date = date_result
+					// println(date_result)
 				})
 			})
 		}

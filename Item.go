@@ -19,4 +19,6 @@ type Item struct {
 	Id    string
 	Color int
 	Type  ItemType
+	Title string
+	Date  string
 }
