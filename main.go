@@ -8,11 +8,12 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
 var DataChan chan Item
+
+const RowHeight float32 = 5
 
 func main() {
 	DataChan = make(chan Item)
@@ -34,8 +35,6 @@ func main() {
 				func(b bool) {
 					if b {
 						go RequestData(entry.Text)
-					} else {
-
 					}
 				},
 				w,
@@ -48,7 +47,8 @@ func main() {
 	)
 	w.SetMainMenu(mainMenu)
 
-	grid := container.New(layout.NewGridLayout(2))
+	grid := container.NewVBox()
+
 	scroll := container.NewScroll(grid)
 	scroll.SetMinSize(fyne.NewSize(640, 480))
 
@@ -62,10 +62,18 @@ func main() {
 				b := (int)((color_int) & 255)
 
 				fyne.Do(func() {
-					date_label := widget.NewLabel(data.Date)
+					date_label := canvas.NewText(data.Date, color.White) //
 					label := canvas.NewText(data.Title, color.RGBA{uint8(r), uint8(g), uint8(b), 255})
-					grid.Add(date_label)
-					grid.Add(label)
+
+					left_side := container.NewStack(date_label)
+					left_side.Resize(fyne.NewSize(200, RowHeight))
+					right_side := container.NewStack(label)
+
+					row := container.NewHBox(left_side, right_side)
+					row.Resize(fyne.NewSize(640, RowHeight))
+
+					grid.Add(row)
+					grid.Refresh()
 				})
 			}
 		}

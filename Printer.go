@@ -31,9 +31,9 @@ func PrintItems(items []Item, app_descptions AppDescriptions) {
 
 			color.RGB(r, g, b).Println(item.Name)
 			item_struct.Color = int(color_int)
-		}
 
-		DataChan <- item_struct
+			DataChan <- item_struct
+		}
 	}
 
 }

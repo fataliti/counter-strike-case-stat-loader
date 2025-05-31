@@ -157,10 +157,10 @@ func CollectOpenedItems(doc *goquery.Document) []Item {
 
 					var finded_item Item
 					finded_item.Id = data_classid + "_" + data_instanceid
-					item_list = append(item_list, finded_item)
-
 					date_result := strings.TrimSpace(strings.ReplaceAll(date_text, time_text, ""))
 					finded_item.Date = date_result
+					item_list = append(item_list, finded_item)
+
 					// println(date_result)
 				})
 			})
