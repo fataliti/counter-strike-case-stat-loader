@@ -1,86 +1,36 @@
 package main
 
-import (
-	"image/color"
-
-	"fyne.io/fyne/v2"
-	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/widget"
-)
-
 var DataChan chan Item
-
-const RowHeight float32 = 5
 
 func main() {
 	DataChan = make(chan Item)
 
-	a := app.New()
-	w := a.NewWindow("CS case open list")
+	// go func() {
+	// 	for {
+	// 		data, ok := <-DataChan
+	// 		if ok {
+	// 			color_int := data.Color
+	// 			r := (int)((color_int >> 16) & 255)
+	// 			g := (int)((color_int >> 8) & 255)
+	// 			b := (int)((color_int) & 255)
 
-	control_menu := fyne.NewMenu("Menu",
-		fyne.NewMenuItem("Start  parsing", func() {
-			entry := widget.NewEntry()
-			entry.SetPlaceHolder("Input cookie")
-			entry.Resize(fyne.NewSize(300, 100))
+	// 			fyne.Do(func() {
+	// 				date_label := canvas.NewText(data.Date, color.White) //
+	// 				label := canvas.NewText(data.Title, color.RGBA{uint8(r), uint8(g), uint8(b), 255})
 
-			dialog.ShowCustomConfirm(
-				"Cookie?",
-				"ok",
-				"no",
-				entry,
-				func(b bool) {
-					if b {
-						go RequestData(entry.Text)
-					}
-				},
-				w,
-			)
-		}),
-	)
+	// 				left_side := container.NewStack(date_label)
+	// 				left_side.Resize(fyne.NewSize(200, RowHeight))
+	// 				right_side := container.NewStack(label)
 
-	mainMenu := fyne.NewMainMenu(
-		control_menu,
-	)
-	w.SetMainMenu(mainMenu)
+	// 				row := container.NewHBox(left_side, right_side)
+	// 				row.Resize(fyne.NewSize(640, RowHeight))
 
-	grid := container.NewVBox()
-
-	scroll := container.NewScroll(grid)
-	scroll.SetMinSize(fyne.NewSize(640, 480))
-
-	go func() {
-		for {
-			data, ok := <-DataChan
-			if ok {
-				color_int := data.Color
-				r := (int)((color_int >> 16) & 255)
-				g := (int)((color_int >> 8) & 255)
-				b := (int)((color_int) & 255)
-
-				fyne.Do(func() {
-					date_label := canvas.NewText(data.Date, color.White) //
-					label := canvas.NewText(data.Title, color.RGBA{uint8(r), uint8(g), uint8(b), 255})
-
-					left_side := container.NewStack(date_label)
-					left_side.Resize(fyne.NewSize(200, RowHeight))
-					right_side := container.NewStack(label)
-
-					row := container.NewHBox(left_side, right_side)
-					row.Resize(fyne.NewSize(640, RowHeight))
-
-					grid.Add(row)
-					grid.Refresh()
-				})
-			}
-		}
-	}()
-	w.SetContent(scroll)
-	w.Resize(fyne.NewSize(640, 480))
-	w.ShowAndRun()
+	// 				grid.Add(row)
+	// 				grid.Refresh()
+	// 			})
+	// 		}
+	// 	}
+	// }()
 
 	// reader := bufio.NewReader(os.Stdin)
 	// input_cookie, input_err := reader.ReadString('\n')
