@@ -44,6 +44,11 @@ func RequestData(cookie string) {
 	item_list := CollectOpenedItems(doc)
 
 	json_string := GetJsonString("g_rgDescriptions", doc)
+
+	if json_string == "" {
+		return
+	}
+
 	var data AppDescriptions
 	err_ := json.Unmarshal([]byte(json_string), &data)
 	if err_ != nil {
