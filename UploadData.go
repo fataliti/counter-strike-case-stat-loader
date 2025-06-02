@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -16,12 +17,18 @@ import (
 )
 
 func RequestData(cookie string) {
+	defer func() {
+		if r := recover(); r != nil {
+			EventsChan <- UploadStartError
+			ErrorChan <- fmt.Sprintf("Panic catch: %v\n%s\n", r, debug.Stack())
+		}
+	}()
+
 	client := &http.Client{}
 	reqv, err := http.NewRequest("GET", "https://steamcommunity.com/my/inventoryhistory/?app[]=730", nil)
 
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
 	reqv.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 7; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0")
@@ -31,8 +38,7 @@ func RequestData(cookie string) {
 
 	resp, err := client.Do(reqv)
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 	defer resp.Body.Close()
 
@@ -46,13 +52,13 @@ func RequestData(cookie string) {
 	json_string := GetJsonString("g_rgDescriptions", doc)
 
 	if json_string == "" {
-		return
+		panic("cant find cookie")
 	}
 
 	var data AppDescriptions
 	err_ := json.Unmarshal([]byte(json_string), &data)
 	if err_ != nil {
-		log.Fatalf("Parse error %v:", err_)
+		panic(err_)
 	}
 
 	cursor_string := GetJsonString("g_historyCursor", doc)
@@ -60,7 +66,7 @@ func RequestData(cookie string) {
 	var cursor Cursor
 	err__ := json.Unmarshal([]byte(cursor_string), &cursor)
 	if err__ != nil {
-		log.Fatalf("Parse error %v:", err__)
+		panic(err__)
 	}
 
 	println("initial cursor: ", cursor_string)
@@ -85,6 +91,7 @@ func RequestData(cookie string) {
 	}
 
 	println("complete")
+	EventsChan <- ParseComplete
 }
 
 func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie string) bool {
@@ -99,7 +106,7 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	// println(fullURL)
 	new_request, err := http.NewRequest("GET", fullURL, nil)
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 	new_request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 7; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0")
 	new_request.Header.Add("Accept-Charset", "UTF-8")
@@ -109,7 +116,7 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	new_client := &http.Client{}
 	new_resp, new_resp_err := new_client.Do(new_request)
 	if new_resp_err != nil {
-		log.Fatal(new_resp_err)
+		panic(new_resp_err)
 	}
 
 	defer new_resp.Body.Close()
@@ -119,12 +126,12 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	new_body, err := io.ReadAll(new_resp.Body)
 	err_2 := json.Unmarshal(new_body, &new_data)
 	if err_2 != nil {
-		log.Fatal(err_2)
+		panic(err_2)
 	}
 
 	new_doc, doc_err := goquery.NewDocumentFromReader(strings.NewReader(new_data.Html))
 	if doc_err != nil {
-		log.Fatal(doc_err)
+		panic(doc_err)
 	}
 
 	new_item_list := CollectOpenedItems(new_doc)

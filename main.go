@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"image/color"
+	"log"
+	"runtime/debug"
 
 	"github.com/AllenDang/giu"
 )
@@ -13,27 +15,41 @@ type StatResult struct {
 	Amount int
 }
 
+const (
+	ParseComplete    int = 0
+	UploadStartError int = 1
+)
+
 var (
-	DataChan chan Item = make(chan Item)
-	ItemList []Item
+	DataChan   chan Item   = make(chan Item)
+	EventsChan chan int    = make(chan int)
+	ErrorChan  chan string = make(chan string)
+	ItemList   []Item
 
 	is_input_cookie bool
 	cookie          string
 
 	is_in_process bool
-	is_complete   bool
 	is_watch_stat bool
+
+	is_show_error_msg bool
+	error_message     string
 
 	stat_result []StatResult
 )
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Panic catch: %v\n%s\n", r, debug.Stack())
+		}
+	}()
+
 	go func() {
 		for {
 			data, ok := <-DataChan
 			if ok {
 				ItemList = append(ItemList, data)
-
 				sum_index := -1
 
 				for i := 0; i < len(stat_result); i++ {
@@ -52,7 +68,36 @@ func main() {
 						Amount: 1,
 					})
 				}
+			}
+		}
+	}()
 
+	go func() {
+		for {
+			event, ok := <-EventsChan
+			if ok {
+				println("event: ", event)
+
+				switch event {
+				case ParseComplete:
+					is_in_process = false
+					is_watch_stat = true
+					fmt.Println("parse complete")
+
+				case UploadStartError:
+					is_in_process = false
+					fmt.Println("error")
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			err, ok := <-ErrorChan
+			if ok {
+				is_show_error_msg = true
+				error_message = err
 			}
 		}
 	}()
@@ -67,9 +112,6 @@ func main() {
 	// RequestData("recentlyVisitedAppHubs=1857090; timezoneOffset=10800,0; browserid=15310613048948578; sessionid=2ba0912b213d5f32bcfdcfa3; steamDidLoginRefresh=1748819715; steamCountry=RU%7Cbf50c1b444a4661436cc9f399260fbd0; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwQl8yNjU2QTUyQl8zMjUzNSIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDg5MDc3MDgsICJuYmYiOiAxNzQwMTc5NzE1LCAiaWF0IjogMTc0ODgxOTcxNSwgImp0aSI6ICIwMDBBXzI2NjM4MTkwXzBGRUVBIiwgIm9hdCI6IDE3NDc4NTQzMTAsICJydF9leHAiOiAxNzY1OTU4NTkwLCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMjEyLjE1NC4yMTIuNDciLCAiaXBfY29uZmlybWVyIjogIjIxMi45Ni43NS4yMDEiIH0.X59TVBChbxdWyvCZy-dYh1SE3hwyx1Q_-NkcboLKMkJ19KW3AH0Ir8Zyq5fKz0zVmmVeVPJjoAdbIt-mk7-qDg")
 	window := giu.NewMasterWindow("CS case open stat", 640, 480, giu.MasterWindowFlagsFloating)
 	window.Run(func() {
-
-		// rows := []giu.TableRowWidget{}
-
 		rows := make([]*giu.TableRowWidget, 0)
 		for i := 0; i < len(ItemList); i++ {
 			rows = append(rows, giu.TableRow(
@@ -90,7 +132,10 @@ func main() {
 			giu.MenuBar().Layout(
 				giu.Menu("Menu").Layout(
 					giu.MenuItem("Start").OnClick(func() {
-						go RequestData(cookie) //"recentlyVisitedAppHubs=1857090; timezoneOffset=10800,0; browserid=15310613048948578; sessionid=2ba0912b213d5f32bcfdcfa3; steamDidLoginRefresh=1748819715; steamCountry=RU%7Cbf50c1b444a4661436cc9f399260fbd0; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwQl8yNjU2QTUyQl8zMjUzNSIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDg5MDc3MDgsICJuYmYiOiAxNzQwMTc5NzE1LCAiaWF0IjogMTc0ODgxOTcxNSwgImp0aSI6ICIwMDBBXzI2NjM4MTkwXzBGRUVBIiwgIm9hdCI6IDE3NDc4NTQzMTAsICJydF9leHAiOiAxNzY1OTU4NTkwLCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMjEyLjE1NC4yMTIuNDciLCAiaXBfY29uZmlybWVyIjogIjIxMi45Ni43NS4yMDEiIH0.X59TVBChbxdWyvCZy-dYh1SE3hwyx1Q_-NkcboLKMkJ19KW3AH0Ir8Zyq5fKz0zVmmVeVPJjoAdbIt-mk7-qDg")
+						if !is_in_process {
+							go RequestData(cookie)
+							is_in_process = true
+						}
 					}),
 
 					giu.MenuItem("Input cookie").OnClick(func() {
@@ -107,6 +152,14 @@ func main() {
 				giu.TableColumn("Date").Flags(giu.TableColumnFlagsWidthFixed).InnerWidthOrWeight(120),
 				giu.TableColumn("Name"),
 			).Rows(rows...),
+
+			giu.PrepareMsgbox(),
+			giu.Custom(func() {
+				if is_show_error_msg {
+					giu.Msgbox("Error", error_message)
+					is_show_error_msg = false
+				}
+			}),
 		)
 
 		if is_input_cookie {
@@ -125,7 +178,6 @@ func main() {
 				get_labels()...,
 			)
 		}
-
 	})
 
 }
