@@ -71,3 +71,14 @@ func FinsString(key string, doc *goquery.Document) string {
 	}
 	return ""
 }
+
+func GetFixedJsonString(content []byte) string {
+	var fixed_json strings.Builder
+	for _, r := range content {
+		if r != '\n' {
+			fixed_json.WriteByte(r)
+		}
+	}
+
+	return fixed_json.String()
+}

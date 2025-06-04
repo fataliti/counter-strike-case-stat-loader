@@ -6,7 +6,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func PrintItems(items []Item, app_descptions AppDescriptions) {
+func ParseItems(items []Item, app_descptions AppDescriptions) {
 	for i := 0; i < len(items); i++ {
 		item_struct := items[i]
 		item_id := item_struct.Id

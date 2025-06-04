@@ -26,11 +26,12 @@ var (
 	ErrorChan  chan string = make(chan string)
 	ItemList   []Item
 
-	is_input_cookie bool
-	cookie          string
+	cookie string
 
-	is_in_process bool
-	is_watch_stat bool
+	is_on_main_screen bool = true
+	is_input_cookie   bool
+	is_in_process     bool
+	is_watch_stat     bool
 
 	is_show_error_msg bool
 	error_message     string
@@ -102,84 +103,102 @@ func main() {
 		}
 	}()
 
-	// reader := bufio.NewReader(os.Stdin)
-	// input_cookie, input_err := reader.ReadString('\n')
-	// if input_err != nil {
-	// 	log.Fatal(input_err)
-	// }
-	// input_cookie = input_cookie[:len(input_cookie)-1]
-	// input_cookie = strings.TrimSpace(input_cookie)
-	// RequestData("recentlyVisitedAppHubs=1857090; timezoneOffset=10800,0; browserid=15310613048948578; sessionid=2ba0912b213d5f32bcfdcfa3; steamDidLoginRefresh=1748819715; steamCountry=RU%7Cbf50c1b444a4661436cc9f399260fbd0; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwQl8yNjU2QTUyQl8zMjUzNSIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDg5MDc3MDgsICJuYmYiOiAxNzQwMTc5NzE1LCAiaWF0IjogMTc0ODgxOTcxNSwgImp0aSI6ICIwMDBBXzI2NjM4MTkwXzBGRUVBIiwgIm9hdCI6IDE3NDc4NTQzMTAsICJydF9leHAiOiAxNzY1OTU4NTkwLCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMjEyLjE1NC4yMTIuNDciLCAiaXBfY29uZmlybWVyIjogIjIxMi45Ni43NS4yMDEiIH0.X59TVBChbxdWyvCZy-dYh1SE3hwyx1Q_-NkcboLKMkJ19KW3AH0Ir8Zyq5fKz0zVmmVeVPJjoAdbIt-mk7-qDg")
 	window := giu.NewMasterWindow("CS case open stat", 640, 480, giu.MasterWindowFlagsFloating)
 	window.Run(func() {
-		rows := make([]*giu.TableRowWidget, 0)
-		for i := 0; i < len(ItemList); i++ {
-			rows = append(rows, giu.TableRow(
-				giu.Label(ItemList[i].Date),
-				giu.Layout{
-					giu.Custom(func() {
-						giu.PushStyleColor(giu.StyleColorText, ItemList[i].GetColorStruct())
-					}),
-					giu.Label(ItemList[i].Title),
-					giu.Custom(func() {
-						giu.PopStyleColor()
-					}),
-				},
-			))
-		}
+		if is_on_main_screen {
+			intro_screen()
 
-		giu.SingleWindowWithMenuBar().Layout(
-			giu.MenuBar().Layout(
-				giu.Menu("Menu").Layout(
-					giu.MenuItem("Start").OnClick(func() {
-						if !is_in_process {
-							go RequestData(cookie)
-							is_in_process = true
-						}
-					}),
-
-					giu.MenuItem("Input cookie").OnClick(func() {
-						is_input_cookie = true
-					}),
-
-					giu.MenuItem("watch stat").OnClick(func() {
-						is_watch_stat = true
-					}),
-				),
-			),
-
-			giu.Table().Columns(
-				giu.TableColumn("Date").Flags(giu.TableColumnFlagsWidthFixed).InnerWidthOrWeight(120),
-				giu.TableColumn("Name"),
-			).Rows(rows...),
-
-			giu.PrepareMsgbox(),
-			giu.Custom(func() {
-				if is_show_error_msg {
-					giu.Msgbox("Error", error_message)
-					is_show_error_msg = false
-				}
-			}),
-		)
-
-		if is_input_cookie {
-			giu.Window("Cookie?").IsOpen(&is_input_cookie).Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoDocking).Size(420, 120).Layout(
-				giu.Align(giu.AlignCenter).To(
-					giu.InputText(&cookie).Label("Cookie"),
-					giu.Button("ok").OnClick(func() {
-						is_input_cookie = false
-					}),
-				),
-			)
-		}
-
-		if is_watch_stat {
-			giu.Window("Stat").IsOpen(&is_watch_stat).Flags(giu.WindowFlagsNoDocking).Size(240, 400).Layout(
-				get_labels()...,
-			)
+		} else {
+			program_screen()
 		}
 	})
 
+}
+
+func intro_screen() {
+	giu.SingleWindow().Layout(
+		giu.Align(giu.AlignCenter).To(
+			giu.Label("Cookie?"),
+			giu.InputText(&cookie),
+			giu.Button("Begin").OnClick(func() {
+				is_on_main_screen = false
+				is_in_process = true
+				go RequestData(cookie)
+			}),
+			giu.Button("Cancel").OnClick(func() {
+				is_on_main_screen = false
+			}),
+		),
+	)
+}
+
+func program_screen() {
+	rows := make([]*giu.TableRowWidget, 0)
+	for i := 0; i < len(ItemList); i++ {
+		rows = append(rows, giu.TableRow(
+			giu.Label(ItemList[i].Date),
+			giu.Layout{
+				giu.Custom(func() {
+					giu.PushStyleColor(giu.StyleColorText, ItemList[i].GetColorStruct())
+				}),
+				giu.Label(ItemList[i].Title),
+				giu.Custom(func() {
+					giu.PopStyleColor()
+				}),
+			},
+		))
+	}
+
+	giu.SingleWindowWithMenuBar().Layout(
+		giu.MenuBar().Layout(
+			giu.Menu("Menu").Layout(
+				giu.MenuItem("Start").OnClick(func() {
+					if !is_in_process {
+						go RequestData(cookie)
+						is_in_process = true
+					}
+				}),
+
+				giu.MenuItem("Input cookie").OnClick(func() {
+					is_input_cookie = true
+				}),
+
+				giu.MenuItem("watch stat").OnClick(func() {
+					is_watch_stat = true
+				}),
+			),
+		),
+
+		giu.Table().Columns(
+			giu.TableColumn("Date").Flags(giu.TableColumnFlagsWidthFixed).InnerWidthOrWeight(120),
+			giu.TableColumn("Name"),
+		).Rows(rows...),
+
+		giu.PrepareMsgbox(),
+		giu.Custom(func() {
+			if is_show_error_msg {
+				giu.Msgbox("Error", error_message)
+				is_show_error_msg = false
+			}
+		}),
+	)
+
+	if is_input_cookie {
+		giu.Window("Cookie?").IsOpen(&is_input_cookie).Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoDocking).Size(420, 120).Layout(
+			giu.Align(giu.AlignCenter).To(
+				giu.InputText(&cookie).Label("Cookie"),
+				giu.Button("ok").OnClick(func() {
+					is_input_cookie = false
+				}),
+			),
+		)
+	}
+
+	if is_watch_stat {
+		giu.Window("Stat").IsOpen(&is_watch_stat).Flags(giu.WindowFlagsNoDocking).Size(240, 400).Layout(
+			get_labels()...,
+		)
+	}
 }
 
 func get_labels() []giu.Widget {

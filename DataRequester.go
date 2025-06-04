@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -26,7 +27,6 @@ func RequestData(cookie string) {
 
 	client := &http.Client{}
 	reqv, err := http.NewRequest("GET", "https://steamcommunity.com/my/inventoryhistory/?app[]=730", nil)
-
 	if err != nil {
 		panic(err)
 	}
@@ -79,10 +79,10 @@ func RequestData(cookie string) {
 	println("session_id: ", session_id)
 	println("user_link", user_link)
 
-	PrintItems(item_list, data)
+	ParseItems(item_list, data)
 	request_count := 0
 	for is_loop := true; is_loop; {
-		// println("load try", request_count)
+		println("load try", request_count)
 		if !MoreLoadRequest(&cursor, user_link, session_id, cookie) {
 			break
 		}
@@ -108,7 +108,7 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	if err != nil {
 		panic(err)
 	}
-	new_request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 7; WOW64; rv:51.0) Gecko/20100101 Firefox/51.0")
+	new_request.Header.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:139.0) Gecko/20100101 Firefox/139.0")
 	new_request.Header.Add("Accept-Charset", "UTF-8")
 	new_request.Header.Add("Accept-Language", "en-US")
 	new_request.Header.Add("Cookie", cookie)
@@ -124,8 +124,23 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	var new_data UpdateHistory
 
 	new_body, err := io.ReadAll(new_resp.Body)
-	err_2 := json.Unmarshal(new_body, &new_data)
+	json_fixed := GetFixedJsonString(new_body)
+
+	err_2 := json.Unmarshal([]byte(json_fixed), &new_data)
 	if err_2 != nil {
+		println(json_fixed)
+
+		file, err := os.Create("broken.json")
+		if err != nil {
+			log.Fatalf("Не удалось создать файл: %v", err)
+		}
+		defer file.Close()
+		n, err := io.Copy(file, new_resp.Body)
+		if err != nil {
+			log.Fatalf("Ошибка при записи в файл: %v", err)
+		}
+		log.Printf("Успешно сохранено %d байт в broken.json\n", n)
+
 		panic(err_2)
 	}
 
@@ -135,7 +150,7 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 	}
 
 	new_item_list := CollectOpenedItems(new_doc)
-	PrintItems(new_item_list, new_data.Descriptions)
+	ParseItems(new_item_list, new_data.Descriptions)
 
 	// fmt.Printf("new cursor %d %d %s \n", new_data.NewCursor.Time, new_data.NewCursor.TimeFrac, new_data.NewCursor.S)
 
