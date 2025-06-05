@@ -12,3 +12,8 @@ But i dont like install java and use command line so i made this
 4) Paste it into the app \
 ![image](pics/paste.png)
 5) Click `Begin` and wait
+
+
+#### Result
+![image](pics/result.png)
+
