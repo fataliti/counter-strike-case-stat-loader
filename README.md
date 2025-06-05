@@ -9,6 +9,6 @@ But i dont like install java and use command line so i made this
 2) Press `F12` and open `Network` tab
 3) Get your `Cooke`
 ![image](pics/cookie.png)
-4) Paste it into the app
+4) Paste it into the app \
 ![image](pics/paste.png)
 5) Click `Begin` and wait
