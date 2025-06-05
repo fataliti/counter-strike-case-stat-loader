@@ -7,13 +7,12 @@ But i dont like install java and use command line so i made this
 
 1) Open your [inventoryhistory](https://steamcommunity.com/my/inventoryhistory) 
 2) Press `F12` and open `Network` tab
-3) Get your `Cooke`
-![image](pics/cookie.png)
-4) Paste it into the app \
-![image](pics/paste.png)
+3) Get your `Cookie`
+<img src="pics/cookie.png" width="900">
+4) Paste it into the app
+<img src="pics/paste.png" width="400">
 5) Click `Begin` and wait
 
 
 #### Result
-![image](pics/result.png)
-
+<img src="pics/result.png" width="400">
