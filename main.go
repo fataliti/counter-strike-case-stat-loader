@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"log"
-	"runtime/debug"
 
 	"github.com/AllenDang/giu"
 )
@@ -42,7 +41,7 @@ var (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Printf("Panic catch: %v\n%s\n", r, debug.Stack())
+			log.Printf("Panic catch: %v\n%s\n", r, StackTrace(3))
 		}
 	}()
 

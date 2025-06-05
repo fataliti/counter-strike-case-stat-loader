@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -21,7 +20,7 @@ func RequestData(cookie string) {
 	defer func() {
 		if r := recover(); r != nil {
 			EventsChan <- UploadStartError
-			ErrorChan <- fmt.Sprintf("Panic catch: %v\n%s\n", r, debug.Stack())
+			ErrorChan <- fmt.Sprintf("Panic catch: %v\n%s\n", r, StackTrace(3))
 		}
 	}()
 
