@@ -1,6 +1,6 @@
 # CS case open stat
 
-Inspiret by [this](https://github.com/cantryDev/CSGOCaseStatsViewerV2)\
+Inspired by [this](https://github.com/cantryDev/CSGOCaseStatsViewerV2)\
 But i dont like install java and use command line so i made this
 
 # How to use 
