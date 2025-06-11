@@ -1,5 +1,7 @@
 package main
 
+import "image/color"
+
 type ItemType string
 
 const (
@@ -16,9 +18,18 @@ const (
 )
 
 type Item struct {
-	Id    string
-	Color int
-	Type  ItemType
-	Title string
-	Date  string
+	Id     string
+	Color  int
+	Type   ItemType
+	Title  string
+	Date   string
+	Rarity string
+}
+
+func (item Item) GetColorStruct() color.RGBA {
+	r := (int)((item.Color >> 16) & 255)
+	g := (int)((item.Color >> 8) & 255)
+	b := (int)((item.Color) & 255)
+
+	return color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255}
 }

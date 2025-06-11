@@ -1,43 +1,220 @@
 package main
 
-var DataChan chan Item
+import (
+	"fmt"
+	"image/color"
+	"log"
+
+	"github.com/AllenDang/giu"
+)
+
+type StatResult struct {
+	Color  color.RGBA
+	Title  string
+	Amount int
+}
+
+const (
+	ParseComplete    int = 0
+	UploadStartError int = 1
+)
+
+var (
+	DataChan   chan Item   = make(chan Item)
+	EventsChan chan int    = make(chan int)
+	ErrorChan  chan string = make(chan string)
+	ItemList   []Item
+
+	cookie string
+
+	is_on_main_screen bool = true
+	is_input_cookie   bool
+	is_in_process     bool
+	is_watch_stat     bool
+
+	is_show_error_msg bool
+	error_message     string
+
+	stat_result []StatResult
+)
 
 func main() {
-	DataChan = make(chan Item)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Panic catch: %v\n%s\n", r, StackTrace(3))
+		}
+	}()
 
-	// go func() {
-	// 	for {
-	// 		data, ok := <-DataChan
-	// 		if ok {
-	// 			color_int := data.Color
-	// 			r := (int)((color_int >> 16) & 255)
-	// 			g := (int)((color_int >> 8) & 255)
-	// 			b := (int)((color_int) & 255)
+	go func() {
+		for {
+			data, ok := <-DataChan
+			if ok {
+				ItemList = append(ItemList, data)
+				sum_index := -1
 
-	// 			fyne.Do(func() {
-	// 				date_label := canvas.NewText(data.Date, color.White) //
-	// 				label := canvas.NewText(data.Title, color.RGBA{uint8(r), uint8(g), uint8(b), 255})
+				for i := 0; i < len(stat_result); i++ {
+					if stat_result[i].Title == data.Rarity {
+						sum_index = i
+						break
+					}
+				}
 
-	// 				left_side := container.NewStack(date_label)
-	// 				left_side.Resize(fyne.NewSize(200, RowHeight))
-	// 				right_side := container.NewStack(label)
+				if sum_index >= 0 {
+					stat_result[sum_index].Amount += 1
+				} else {
+					stat_result = append(stat_result, StatResult{
+						Color:  data.GetColorStruct(),
+						Title:  data.Rarity,
+						Amount: 1,
+					})
+				}
+			}
+		}
+	}()
 
-	// 				row := container.NewHBox(left_side, right_side)
-	// 				row.Resize(fyne.NewSize(640, RowHeight))
+	go func() {
+		for {
+			event, ok := <-EventsChan
+			if ok {
+				println("event: ", event)
 
-	// 				grid.Add(row)
-	// 				grid.Refresh()
-	// 			})
-	// 		}
-	// 	}
-	// }()
+				switch event {
+				case ParseComplete:
+					is_in_process = false
+					is_watch_stat = true
+					fmt.Println("parse complete")
 
-	// reader := bufio.NewReader(os.Stdin)
-	// input_cookie, input_err := reader.ReadString('\n')
-	// if input_err != nil {
-	// 	log.Fatal(input_err)
-	// }
-	// input_cookie = input_cookie[:len(input_cookie)-1]
-	// input_cookie = strings.TrimSpace(input_cookie)
-	// RequestData("timezoneOffset=10800,0; recentlyVisitedAppHubs=1138850%2C730%2C1361210%2C1643320%2C2142790%2C1088710; browserid=96369691529769043; strInventoryLastContext=730_2; sessionid=69f27bab2c8c8f02bdc43788; steamDidLoginRefresh=1748616596; steamCountry=RU%7Cbf50c1b444a4661436cc9f399260fbd0; steamLoginSecure=76561198061430462%7C%7CeyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNjIwNkNEQ19EMDBGQyIsICJzdWIiOiAiNzY1NjExOTgwNjE0MzA0NjIiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NDg3MDM5NjAsICJuYmYiOiAxNzM5OTc2NTk2LCAiaWF0IjogMTc0ODYxNjU5NiwgImp0aSI6ICIwMDBBXzI2NUZFMTU3X0QyRkVGIiwgIm9hdCI6IDE3NDQ0Njg1NjgsICJydF9leHAiOiAxNzYyMzgwMTMwLCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiNS4xOC4yNTMuMTk4IiwgImlwX2NvbmZpcm1lciI6ICIxMDQuMjM4LjI5LjI0NyIgfQ.nDWRwajwl31LKMQ7lzsCYF3PmVfcY38O5m4Pox0Au4BIbeB1v-wyGeJ9huXHyYnlcR9oLg1wVFbZlGBOnfaPAA")
+				case UploadStartError:
+					is_in_process = false
+					fmt.Println("error")
+				}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			err, ok := <-ErrorChan
+			if ok {
+				is_show_error_msg = true
+				error_message = err
+			}
+		}
+	}()
+
+	window := giu.NewMasterWindow("CS case open stat", 640, 480, giu.MasterWindowFlagsFloating)
+	window.Run(func() {
+		if is_on_main_screen {
+			intro_screen()
+
+		} else {
+			program_screen()
+		}
+	})
+
+}
+
+func intro_screen() {
+	giu.SingleWindow().Layout(
+		giu.Align(giu.AlignCenter).To(
+			giu.Label("Cookie?"),
+			giu.InputText(&cookie),
+			giu.Button("Begin").OnClick(func() {
+				is_on_main_screen = false
+				is_in_process = true
+				go RequestData(cookie)
+			}),
+			giu.Button("Cancel").OnClick(func() {
+				is_on_main_screen = false
+			}),
+		),
+	)
+}
+
+func program_screen() {
+	rows := make([]*giu.TableRowWidget, 0)
+	for i := 0; i < len(ItemList); i++ {
+		rows = append(rows, giu.TableRow(
+			giu.Label(ItemList[i].Date),
+			giu.Layout{
+				giu.Custom(func() {
+					giu.PushStyleColor(giu.StyleColorText, ItemList[i].GetColorStruct())
+				}),
+				giu.Label(ItemList[i].Title),
+				giu.Custom(func() {
+					giu.PopStyleColor()
+				}),
+			},
+		))
+	}
+
+	giu.SingleWindowWithMenuBar().Layout(
+		giu.MenuBar().Layout(
+			giu.Menu("Menu").Layout(
+				giu.MenuItem("Start").OnClick(func() {
+					if !is_in_process {
+						go RequestData(cookie)
+						is_in_process = true
+					}
+				}),
+
+				giu.MenuItem("Input cookie").OnClick(func() {
+					is_input_cookie = true
+				}),
+
+				giu.MenuItem("watch stat").OnClick(func() {
+					is_watch_stat = true
+				}),
+			),
+		),
+
+		giu.Table().Columns(
+			giu.TableColumn("Date").Flags(giu.TableColumnFlagsWidthFixed).InnerWidthOrWeight(120),
+			giu.TableColumn("Name"),
+		).Rows(rows...),
+
+		giu.PrepareMsgbox(),
+		giu.Custom(func() {
+			if is_show_error_msg {
+				giu.Msgbox("Error", error_message)
+				is_show_error_msg = false
+			}
+		}),
+	)
+
+	if is_input_cookie {
+		giu.Window("Cookie?").IsOpen(&is_input_cookie).Flags(giu.WindowFlagsNoResize|giu.WindowFlagsNoDocking).Size(420, 120).Layout(
+			giu.Align(giu.AlignCenter).To(
+				giu.InputText(&cookie).Label("Cookie"),
+				giu.Button("ok").OnClick(func() {
+					is_input_cookie = false
+				}),
+			),
+		)
+	}
+
+	if is_watch_stat {
+		giu.Window("Stat").IsOpen(&is_watch_stat).Flags(giu.WindowFlagsNoDocking).Size(240, 400).Layout(
+			get_labels()...,
+		)
+	}
+}
+
+func get_labels() []giu.Widget {
+	labels := make([]giu.Widget, 0)
+	for i := 0; i < len(stat_result); i++ {
+		stat := stat_result[i]
+
+		labels = append(labels, giu.Layout{
+			giu.Custom(func() {
+				giu.PushStyleColor(giu.StyleColorText, stat.Color)
+			}),
+			giu.Label(fmt.Sprintf("%s: %d", stat.Title, stat.Amount)),
+			giu.Custom(func() {
+				giu.PopStyleColor()
+			}),
+		})
+	}
+
+	return labels
 }

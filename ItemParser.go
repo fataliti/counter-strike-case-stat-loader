@@ -6,7 +6,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func PrintItems(items []Item, app_descptions AppDescriptions) {
+func ParseItems(items []Item, app_descptions AppDescriptions) {
 	for i := 0; i < len(items); i++ {
 		item_struct := items[i]
 		item_id := item_struct.Id
@@ -31,6 +31,7 @@ func PrintItems(items []Item, app_descptions AppDescriptions) {
 
 			color.RGB(r, g, b).Println(item.Name)
 			item_struct.Color = int(color_int)
+			item_struct.Rarity = item.Tags[4].Name
 
 			DataChan <- item_struct
 		}
