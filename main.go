@@ -143,7 +143,10 @@ func program_screen() {
 				giu.Label(ItemList[i].Title),
 				giu.Custom(func() {
 					giu.PopStyleColor()
+					giu.SameLine()
 				}),
+				giu.ImageWithFile("./search.png"),
+				giu.Tooltip("").Layout(giu.ImageWithURL(ItemList[i].GetIconURl())),
 			},
 		))
 	}

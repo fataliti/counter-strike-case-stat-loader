@@ -1,6 +1,9 @@
 package main
 
-import "image/color"
+import (
+	"fmt"
+	"image/color"
+)
 
 type ItemType string
 
@@ -18,12 +21,13 @@ const (
 )
 
 type Item struct {
-	Id     string
-	Color  int
-	Type   ItemType
-	Title  string
-	Date   string
-	Rarity string
+	Id      string
+	Color   int
+	Type    ItemType
+	Title   string
+	Date    string
+	Rarity  string
+	IconUrl string
 }
 
 func (item Item) GetColorStruct() color.RGBA {
@@ -32,4 +36,8 @@ func (item Item) GetColorStruct() color.RGBA {
 	b := (int)((item.Color) & 255)
 
 	return color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255}
+}
+
+func (item Item) GetIconURl() string {
+	return fmt.Sprintf("https://community.fastly.steamstatic.com/economy/image/%s/480x160", item.IconUrl)
 }

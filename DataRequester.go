@@ -203,7 +203,7 @@ type Cursor struct {
 }
 
 type ItemDescription struct {
-	// IconUrl string `json:"icon_url"`
+	IconUrl string `json:"icon_url"`
 	// IconDragUrl string `json:"icon_drag_url"`
 	Name            string `json:"name"`
 	MarketHashName  string `json:"market_hash_name"`
