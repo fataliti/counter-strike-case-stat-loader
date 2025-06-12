@@ -135,7 +135,15 @@ func program_screen() {
 	rows := make([]*giu.TableRowWidget, 0)
 	for i := 0; i < len(ItemList); i++ {
 		rows = append(rows, giu.TableRow(
-			giu.Label(ItemList[i].Date),
+			giu.Layout{
+				giu.Label(ItemList[i].Date),
+				giu.Custom(func() {
+					giu.SameLine()
+				}),
+				giu.Align(giu.AlignRight).To(giu.ImageWithFile("./look.png")),
+				giu.Tooltip("").Layout(giu.ImageWithURL(ItemList[i].GetIconURl())),
+			},
+
 			giu.Layout{
 				giu.Custom(func() {
 					giu.PushStyleColor(giu.StyleColorText, ItemList[i].GetColorStruct())
@@ -143,10 +151,7 @@ func program_screen() {
 				giu.Label(ItemList[i].Title),
 				giu.Custom(func() {
 					giu.PopStyleColor()
-					giu.SameLine()
 				}),
-				giu.ImageWithFile("./search.png"),
-				giu.Tooltip("").Layout(giu.ImageWithURL(ItemList[i].GetIconURl())),
 			},
 		))
 	}
