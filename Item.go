@@ -18,6 +18,7 @@ const (
 	CSGO_Type_C4          ItemType = "CSGO_Type_C4"
 	CSGO_Type_Grenade     ItemType = "CSGO_Type_Grenade"
 	CSGO_Type_Equipment   ItemType = "CSGO_Type_Equipment"
+	CSGO_Type_Hands       ItemType = "Type_Hands"
 )
 
 type Item struct {
@@ -35,9 +36,21 @@ func (item Item) GetColorStruct() color.RGBA {
 	g := (int)((item.Color >> 8) & 255)
 	b := (int)((item.Color) & 255)
 
+	if item.IsKnife() || item.IsGloves() {
+		return color.RGBA{R: 248, G: 148, B: 6, A: 255}
+	}
+
 	return color.RGBA{R: uint8(r), G: uint8(g), B: uint8(b), A: 255}
 }
 
 func (item Item) GetIconURl() string {
 	return fmt.Sprintf("https://community.fastly.steamstatic.com/economy/image/%s/480x160", item.IconUrl)
+}
+
+func (item Item) IsKnife() bool {
+	return item.Type == CSGO_Type_Knife
+}
+
+func (item Item) IsGloves() bool {
+	return item.Type == CSGO_Type_Knife
 }

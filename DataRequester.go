@@ -122,7 +122,7 @@ func MoreLoadRequest(cursor *Cursor, user_link string, session_id string, cookie
 
 	var new_data UpdateHistory
 
-	new_body, err := io.ReadAll(new_resp.Body)
+	new_body, _ := io.ReadAll(new_resp.Body)
 	json_fixed := GetFixedJsonString(new_body)
 
 	err_2 := json.Unmarshal([]byte(json_fixed), &new_data)
@@ -177,9 +177,8 @@ func CollectOpenedItems(doc *goquery.Document) []Item {
 		if strings.Contains(event_text, "Unlocked a container") {
 			s.Find(".tradehistory_items_withimages:contains('+')").Each(func(i int, s *goquery.Selection) {
 				s.Find("[data-classid]").Each(func(i int, s *goquery.Selection) {
-					data_classid, exist := s.Attr("data-classid")
-					data_instanceid, exist := s.Attr("data-instanceid")
-					_ = exist
+					data_classid, _ := s.Attr("data-classid")
+					data_instanceid, _ := s.Attr("data-instanceid")
 
 					var finded_item Item
 					finded_item.Id = data_classid + "_" + data_instanceid

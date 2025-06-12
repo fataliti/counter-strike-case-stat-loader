@@ -52,8 +52,17 @@ func main() {
 				ItemList = append(ItemList, data)
 				sum_index := -1
 
+				item_rarity := data.Rarity
+				if data.IsGloves() {
+					item_rarity = "Gloves"
+				}
+
+				if data.IsKnife() {
+					item_rarity = "Knife"
+				}
+
 				for i := 0; i < len(stat_result); i++ {
-					if stat_result[i].Title == data.Rarity {
+					if stat_result[i].Title == item_rarity {
 						sum_index = i
 						break
 					}
@@ -64,7 +73,7 @@ func main() {
 				} else {
 					stat_result = append(stat_result, StatResult{
 						Color:  data.GetColorStruct(),
-						Title:  data.Rarity,
+						Title:  item_rarity,
 						Amount: 1,
 					})
 				}
